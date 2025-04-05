@@ -1,0 +1,1114 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:matrimony_application/Design/about_us.dart';
+import 'package:matrimony_application/Design/contact_us.dart';
+import 'package:matrimony_application/Design/favourite_page.dart';
+import 'package:matrimony_application/Design/main_page.dart';
+import 'package:matrimony_application/Design/review_page.dart';
+import 'package:matrimony_application/Design/user_list.dart';
+import 'package:matrimony_application/Design/utils/user.dart';
+
+class AddUserForm extends StatefulWidget {
+  final bool isEditing;
+  final int? userIndex;
+  final Map<String, dynamic>? userData;
+
+  AddUserForm(
+      {super.key, this.isEditing = false, this.userIndex, this.userData});
+
+  @override
+  State<AddUserForm> createState() => _AddUserState();
+}
+// class User {
+//   String name, email, city, hobbies,num;
+//   int age;
+//
+//   User({
+//     required this.name,
+//     required this.email,
+//     required this.age,
+//     required this.city,
+//     required this.hobbies,
+//     required this.num,
+//   });
+// }
+
+class _AddUserState extends State<AddUserForm> {
+
+  User user = User();
+
+  GlobalKey<FormState> _key = GlobalKey<FormState>();
+
+  TextEditingController _nameController = TextEditingController();
+  TextEditingController _emailController = TextEditingController();
+  TextEditingController _mobileController = TextEditingController();
+  TextEditingController _dobController = TextEditingController();
+  TextEditingController _passwordController = TextEditingController();
+  TextEditingController _confirmPasswordController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+
+  List<String> _selectedHobbies = [];
+  String? _gender;
+  String? _selectedreligions;
+  String? _selectedQualification;
+  String? _selectedOccupation;
+  String? _selectedCity;
+
+  Widget _buildCheckbox(String hobby) {
+    return Expanded(
+      child: CheckboxListTile(
+        title: Text(
+          hobby,
+          style: TextStyle(color: Colors.black), // Ensures text is white
+        ),
+        value: _selectedHobbies.contains(hobby),
+        onChanged: (bool? value) {
+          setState(() {
+            if (value == true) {
+              _selectedHobbies.add(hobby);
+            } else {
+              _selectedHobbies.remove(hobby);
+            }
+          });
+        },
+        activeColor: Colors.grey,
+        // Keeps the checkbox active color
+        checkColor: Colors.white,
+        // Ensures the tick mark inside the checkbox is white
+        controlAffinity: ListTileControlAffinity.leading, // Adjusts alignment
+      ),
+    );
+  }
+
+
+  int _calculateAge(String dob) {
+    try {
+      // Ensure the date format is correct (dd/MM/yyyy)
+      List<String> parts = dob.split('/');
+      if (parts.length != 3) return 0; // Invalid format
+
+      int day = int.tryParse(parts[0]) ?? 0;
+      int month = int.tryParse(parts[1]) ?? 0;
+      int year = int.tryParse(parts[2]) ?? 0;
+
+      // Ensure valid date values
+      if (day == 0 || month == 0 || year == 0) return 0;
+
+      DateTime birthDate = DateTime(year, month, day);
+      DateTime today = DateTime.now();
+
+      int age = today.year - birthDate.year;
+
+      // Adjust if birthday hasn't occurred yet this year
+      if (today.month < birthDate.month ||
+          (today.month == birthDate.month && today.day < birthDate.day)) {
+        age--;
+      }
+
+      return age;
+    } catch (e) {
+      return 0; // Return 0 if any parsing error occurs
+    }
+  }
+
+  void initState() {
+    super.initState();
+    if (widget.isEditing && widget.userData != null) {
+      _nameController.text = widget.userData!['name'];
+      _emailController.text = widget.userData!['email'];
+      _mobileController.text = widget.userData!['num'];
+
+      // ✅ Ensure DOB is stored properly
+      _dobController.text =
+          widget.userData!['dob'] ?? ""; // Ensure it's not null
+
+      _passwordController.text = widget.userData!['pass'];
+      _confirmPasswordController.text = widget.userData!['confi_pass'];
+      _gender = widget.userData!['gender'];
+      _selectedCity = widget.userData!['city'];
+      _selectedHobbies = widget.userData!['hobbies'].toString().split(', ');
+      _selectedreligions = widget.userData!['religion'];
+      _selectedQualification = widget.userData!['qualification'];
+      _selectedOccupation = widget.userData!['occupation'];
+    }
+  }
+
+  // void _saveUser() {
+  //   if (_key.currentState!.validate()) {
+  //     String name = _nameController.text.trim();
+  //     String mail = _emailController.text.trim();
+  //     String mobile = _mobileController.text.trim();
+  //     String dob = _dobController.text.trim();
+  //     int age = _calculateAge(dob);
+  //     String pass = _passwordController.text.trim();
+  //     String confirm_pass = _confirmPasswordController.text.trim();
+  //     String gender = _gender.toString();
+  //     String religion = _selectedreligions.toString();
+  //     String qualification = _selectedQualification.toString();
+  //     String occupation = _selectedOccupation.toString();
+  //     String city = _selectedCity.toString();
+  //     String hobbies = _selectedHobbies.join(', ');
+  //
+  //     Map<String, dynamic> userData = {
+  //       'name': name,
+  //       'email': mail,
+  //       'city': city,
+  //       'hobbies': hobbies,
+  //       'gender': gender,
+  //       'num': mobile,
+  //       'dob': dob,
+  //       'age': _calculateAge(dob),
+  //       'religion': religion,
+  //       'qualification': qualification,
+  //       'occupation': occupation,
+  //       'pass': pass,
+  //       'confi_pass': confirm_pass,
+  //     };
+  //
+  //     if (widget.isEditing) {
+  //       // 🔵 Update existing user
+  //       user.updateUser(widget.userIndex!, userData);
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('User Updated Successfully.')),
+  //       );
+  //     } else {
+  //       // 🔴 Add new user
+  //       user.addUser(
+  //         name: name,
+  //         email: mail,
+  //         city: city,
+  //         hobbies: hobbies,
+  //         gender: gender,
+  //         num: mobile,
+  //         religion: religion,
+  //         qualification: qualification,
+  //         occupation: occupation,
+  //         age: age,
+  //         pass: pass,
+  //         confi_pass: confirm_pass,
+  //       );
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text('User Added Successfully.')),
+  //       );
+  //     }
+  //
+  //     Navigator.pop(context, user);
+  //   }
+  // }
+
+  // Method to add user to the database
+  Future<void> _addUser() async {
+    if (_formKey.currentState!.validate()) {
+      await UserDatabase.instance.addUser({
+        'name': nameController.text,
+        'email': emailController.text,
+        'city': cityController.text,
+        'hobbies': hobbiesController.text,
+        'gender': genderController.text,
+        'num': numController.text,
+        'age': int.parse(ageController.text),
+        'pass': passController.text,
+        'confi_pass': confiPassController.text,
+        'religion': religionController.text,
+        'qualification': qualificationController.text,
+        'occupation': occupationController.text,
+        'isFavorite': 0,
+      });
+
+      // Clear fields after successful submission
+      nameController.clear();
+      emailController.clear();
+      cityController.clear();
+      hobbiesController.clear();
+      genderController.clear();
+      numController.clear();
+      ageController.clear();
+      passController.clear();
+      confiPassController.clear();
+      religionController.clear();
+      qualificationController.clear();
+      occupationController.clear();
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('User Added Successfully!')),
+      );
+
+      Navigator.pop(context); // Close the form after saving
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Register User',
+          style: TextStyle(
+            color: Colors.white, // Ensures contrast
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        // backgroundColor: Color.fromRGBO(60, 40, 31, 1), // Rich Chocolate Brown
+        backgroundColor: Color(0xFF4E2A14),
+        // backgroundColor: Color(0xFFFFE3E3),
+        elevation: 5,
+        shadowColor: Colors.black45,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.white), // Back button
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+      ),
+      body: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              // color: Color.fromRGBO(247, 204, 169, 1), // Light Warm Sand (Elegant & Soft)
+              // color: Color(0xFFFFF8E1),
+              color: Color(0xFFFFF0F5),
+            ),
+          ),
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _key,
+                child: Column(
+                  children: [
+                    // User Name
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "Enter Your Name",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'[0-9]'))
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please Enter UserName!!!";
+                        } else if (value.length < 5) {
+                          return "Username Must Be of 5 Characters.";
+                        } else {
+                          return null;
+                        }
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Email
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: "Enter Your Email Address",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter your email address";
+                        } else if (!RegExp(
+                            r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+                            .hasMatch(value)) {
+                          return "Please enter a valid email address";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Mobile Number
+                    TextFormField(
+                      maxLength: 10,
+                      controller: _mobileController,
+                      decoration: InputDecoration(
+                        labelText: "Mobile Number",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        // Restricts input to numbers only
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter your mobile number";
+                        } else if (!RegExp(r"^\d{10}$").hasMatch(value)) {
+                          return "Please enter a valid 10-digit mobile number";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Date Of Birth
+                    TextFormField(
+                      controller: _dobController,
+                      readOnly: true,
+                      // Prevents manual text input
+                      decoration: InputDecoration(
+                        labelText: "Date of Birth",
+                        labelStyle: TextStyle(color: Colors.black),
+                        border: OutlineInputBorder(),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      onTap: () async {
+                        DateTime? selectedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(1900), // Adjust as per your needs
+                          lastDate: DateTime.now(),
+                        );
+                        if (selectedDate != null) {
+                          // Format date as "01/03/2025"
+                          String formattedDate = DateFormat("dd/MM/yyyy")
+                              .format(selectedDate);
+                          _dobController.text = formattedDate;
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your date of birth";
+                        }
+                        else {
+                          return null;
+                        }
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // City
+                    DropdownButtonFormField<String>(
+                      value: _selectedCity,
+                      decoration: InputDecoration(
+                        labelText: "City",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "Delhi",
+                        "Mumbai",
+                        "Bangalore",
+                        "Morbi",
+                        "Rajkot",
+                        "Ahmedabad"
+                      ]
+                          .map((city) =>
+                          DropdownMenuItem(
+                            value: city,
+                            child: Text(
+                                city, style: TextStyle(color: Colors.black)),
+                          )
+                      )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCity = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your city";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Gender
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Gender",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight
+                              .bold, color: Colors.black),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: Text("Male",
+                                    style: TextStyle(color: Colors.black)),
+                                value: "Male",
+                                groupValue: _gender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _gender = value;
+                                  });
+                                },
+                                activeColor: Color(0xFF708090),
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: Text("Female",
+                                    style: TextStyle(color: Colors.black)),
+                                value: "Female",
+                                groupValue: _gender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _gender = value;
+                                  });
+                                },
+                                activeColor: Color(0xFF708090),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+                    // Hobbies
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Hobbies",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight
+                              .bold, color: Colors.black),
+                        ),
+                        Column(
+                          children: [
+                            Row(
+                              children: [
+                                _buildCheckbox("Travelling"),
+                                _buildCheckbox("Reading Novels"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                _buildCheckbox("Listening Music"),
+                                _buildCheckbox("Photography"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                _buildCheckbox("Shopping"),
+                                _buildCheckbox("Handicraft"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                _buildCheckbox("Writing"),
+                                _buildCheckbox("Designing"),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+                    // Religion
+                    DropdownButtonFormField<String>(
+                      value: _selectedreligions,
+                      // Ensure this matches one of the items
+                      decoration: InputDecoration(
+                        labelText: "Religion",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "Hinduism",
+                        "Islam (Muslim)",
+                        "Christianity",
+                        "Sikhism",
+                        "Buddhism",
+                        "Jainism",
+                        "Zoroastrianism (Parsi)"
+                      ]
+                          .map((religion) =>
+                          DropdownMenuItem(
+                            value: religion,
+                            child: Text(religion,
+                                style: TextStyle(color: Colors.black)),
+                          ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedreligions = value!;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your Religion";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20,),
+                    // Highest Qualification
+                    DropdownButtonFormField<String>(
+                      value: _selectedQualification,
+                      // Ensure this matches one of the items
+                      decoration: InputDecoration(
+                        labelText: "Highest Qualification",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "High School",
+                        "Undergraduate",
+                        "Postgraduate",
+                        "Doctorate",
+                        "Others"
+                      ]
+                          .map((qualification) =>
+                          DropdownMenuItem(
+                            value: qualification,
+                            child: Text(qualification,
+                                style: TextStyle(color: Colors.black)),
+                          ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedQualification = value!;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your Highest Qualification";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20,),
+                    // Occupation (Job, Business, Student, etc.)
+                    DropdownButtonFormField<String>(
+                      value: _selectedOccupation,
+                      decoration: InputDecoration(
+                        labelText: "Occupation",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "Job",
+                        "Business",
+                        "Student",
+                        "Freelancer",
+                        "Self-Employed",
+                        "Retired",
+                        "Others"
+                      ].map((occupation) =>
+                          DropdownMenuItem(
+                            value: occupation,
+                            child: Text(occupation,
+                                style: TextStyle(color: Colors.black)),
+                          )).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedOccupation = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your Occupation";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20,),
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        labelStyle: TextStyle(color: Colors.black),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons
+                                .visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      obscureText: _obscurePassword,
+                      // Controlled by _obscurePassword
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter a password";
+                        } else if (value.length < 6) {
+                          return "Password must be at least 6 characters long";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Confirm Password
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      decoration: InputDecoration(
+                        labelText: "Confirm Password",
+                        labelStyle: TextStyle(color: Colors.black),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                              !_obscureConfirmPassword;
+                            });
+                          },
+                        ),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      obscureText: _obscureConfirmPassword,
+                      // Controlled by _obscureConfirmPassword
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please confirm your password";
+                        } else if (value != _passwordController.text) {
+                          return "Passwords do not match";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Button For Submit
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: _saveUser,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFF4E2A14),
+                        ),
+                        child: Text(widget.isEditing ? "Update" : "Submit",
+                          style: TextStyle(color: Colors.white),),
+                        // child: Text(
+                        //   "Submit",
+                        //   style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+
+
+
+
+
+
+
+TextFormField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "Enter Your Name",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      textCapitalization: TextCapitalization.words,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'[0-9]'))
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please Enter UserName!!!";
+                        } else if (value.length < 5) {
+                          return "Username Must Be of 5 Characters.";
+                        } else {
+                          return null;
+                        }
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Email
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: "Enter Your Email Address",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter your email address";
+                        } else if (!RegExp(
+                            r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
+                            .hasMatch(value)) {
+                          return "Please enter a valid email address";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Mobile Number
+                    TextFormField(
+                      maxLength: 10,
+                      controller: _mobileController,
+                      decoration: InputDecoration(
+                        labelText: "Mobile Number",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        // Restricts input to numbers only
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter your mobile number";
+                        } else if (!RegExp(r"^\d{10}$").hasMatch(value)) {
+                          return "Please enter a valid 10-digit mobile number";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Date Of Birth
+                    TextFormField(
+                      controller: _dobController,
+                      readOnly: true,
+                      // Prevents manual text input
+                      decoration: InputDecoration(
+                        labelText: "Date of Birth",
+                        labelStyle: TextStyle(color: Colors.black),
+                        border: OutlineInputBorder(),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      onTap: () async {
+                        DateTime? selectedDate = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(1900), // Adjust as per your needs
+                          lastDate: DateTime.now(),
+                        );
+                        if (selectedDate != null) {
+                          // Format date as "01/03/2025"
+                          String formattedDate = DateFormat("dd/MM/yyyy")
+                              .format(selectedDate);
+                          _dobController.text = formattedDate;
+                        }
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your date of birth";
+                        }
+                        else {
+                          return null;
+                        }
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // City
+                    DropdownButtonFormField<String>(
+                      value: _selectedCity,
+                      decoration: InputDecoration(
+                        labelText: "City",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "Delhi",
+                        "Mumbai",
+                        "Bangalore",
+                        "Morbi",
+                        "Rajkot",
+                        "Ahmedabad"
+                      ]
+                          .map((city) =>
+                          DropdownMenuItem(
+                            value: city,
+                            child: Text(
+                                city, style: TextStyle(color: Colors.black)),
+                          )
+                      )
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCity = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your city";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Gender
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Gender",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight
+                              .bold, color: Colors.black),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: Text("Male",
+                                    style: TextStyle(color: Colors.black)),
+                                value: "Male",
+                                groupValue: _gender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _gender = value;
+                                  });
+                                },
+                                activeColor: Color(0xFF708090),
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: Text("Female",
+                                    style: TextStyle(color: Colors.black)),
+                                value: "Female",
+                                groupValue: _gender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _gender = value;
+                                  });
+                                },
+                                activeColor: Color(0xFF708090),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+                    // Hobbies
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Hobbies",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight
+                              .bold, color: Colors.black),
+                        ),
+                        Column(
+                          children: [
+                            Row(
+                              children: [
+                                _buildCheckbox("Travelling"),
+                                _buildCheckbox("Reading Novels"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                _buildCheckbox("Listening Music"),
+                                _buildCheckbox("Photography"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                _buildCheckbox("Shopping"),
+                                _buildCheckbox("Handicraft"),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                _buildCheckbox("Writing"),
+                                _buildCheckbox("Designing"),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+                    // Religion
+                    DropdownButtonFormField<String>(
+                      value: _selectedreligions,
+                      // Ensure this matches one of the items
+                      decoration: InputDecoration(
+                        labelText: "Religion",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "Hinduism",
+                        "Islam (Muslim)",
+                        "Christianity",
+                        "Sikhism",
+                        "Buddhism",
+                        "Jainism",
+                        "Zoroastrianism (Parsi)"
+                      ]
+                          .map((religion) =>
+                          DropdownMenuItem(
+                            value: religion,
+                            child: Text(religion,
+                                style: TextStyle(color: Colors.black)),
+                          ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedreligions = value!;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your Religion";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20,),
+                    // Highest Qualification
+                    DropdownButtonFormField<String>(
+                      value: _selectedQualification,
+                      // Ensure this matches one of the items
+                      decoration: InputDecoration(
+                        labelText: "Highest Qualification",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "High School",
+                        "Undergraduate",
+                        "Postgraduate",
+                        "Doctorate",
+                        "Others"
+                      ]
+                          .map((qualification) =>
+                          DropdownMenuItem(
+                            value: qualification,
+                            child: Text(qualification,
+                                style: TextStyle(color: Colors.black)),
+                          ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedQualification = value!;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your Highest Qualification";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20,),
+                    // Occupation (Job, Business, Student, etc.)
+                    DropdownButtonFormField<String>(
+                      value: _selectedOccupation,
+                      decoration: InputDecoration(
+                        labelText: "Occupation",
+                        labelStyle: TextStyle(color: Colors.black),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      items: [
+                        "Job",
+                        "Business",
+                        "Student",
+                        "Freelancer",
+                        "Self-Employed",
+                        "Retired",
+                        "Others"
+                      ].map((occupation) =>
+                          DropdownMenuItem(
+                            value: occupation,
+                            child: Text(occupation,
+                                style: TextStyle(color: Colors.black)),
+                          )).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedOccupation = value;
+                        });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please select your Occupation";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20,),
+                    // Password
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        labelStyle: TextStyle(color: Colors.black),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons
+                                .visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      obscureText: _obscurePassword,
+                      // Controlled by _obscurePassword
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please enter a password";
+                        } else if (value.length < 6) {
+                          return "Password must be at least 6 characters long";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),
+                    // Confirm Password
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      decoration: InputDecoration(
+                        labelText: "Confirm Password",
+                        labelStyle: TextStyle(color: Colors.black),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword =
+                              !_obscureConfirmPassword;
+                            });
+                          },
+                        ),
+                      ),
+                      style: TextStyle(color: Colors.black),
+                      obscureText: _obscureConfirmPassword,
+                      // Controlled by _obscureConfirmPassword
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Please confirm your password";
+                        } else if (value != _passwordController.text) {
+                          return "Passwords do not match";
+                        }
+                        return null;
+                      },
+                    ),
+                    SizedBox(height: 20),

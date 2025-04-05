@@ -1,0 +1,28 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Apple iPhone 14",
+      "category": "Smartphones",
+      "price": 799.99,
+      "stock": 50,
+      "rating": 4.8
+    },
+    {
+      "id": 2,
+      "name": "Samsung Galaxy S23",
+      "category": "Smartphones",
+      "price": 749.99,
+      "stock": 30,
+      "rating": 4.7
+    },
+    {
+      "id": 3,
+      "name": "Sony WH-1000XM5",
+      "category": "Headphones",
+      "price": 399.99,
+      "stock": 20,
+      "rating": 4.9
+    }
+  ]
+}
